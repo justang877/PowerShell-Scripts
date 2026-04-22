@@ -1,0 +1,25 @@
+Create groups/objects
+New-ADServiceAccount -Name LondonSQLFarm -PrincipalsAllowedToRetrieveManagedPassword SEA-SQL1, SEA-SQL2, SEA-SQL3
+Add-KdsRootKey –EffectiveImmediately
+
+
+Info Retrieval 
+Copy the URL for Windows Maps. For example, copy the URL https://www.microsoft.com/en-us/store/p/windows-maps/9wzdncrdtbvb. Note the series of letters at the end of the URL. For example, 9wzdncrdtbvb.
+In a different tab, paste the following URL https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/<app id>/applockerdata, and then replace <app id>.
+
+Get-AppxPackage *<app_name>
+
+Example: Obtaining the App Name and Publisher ID for Desktop apps
+Get-AppLockerFileInformation -Path "<path of the exe/msi>"
+Get-AppLockerFileInformation -Path "C:\Program Files\Internet Explorer\iexplore.exe"
+Get-AppLockerFileInformation -Path "C:\MSI\ProjectMyScreenApp.msi"
+
+
+
+
+
+
+
+
+
+https://www.ibm.com/docs/en/maas360?topic=uwp-examples-obtaining-windows-app-ids-manually
