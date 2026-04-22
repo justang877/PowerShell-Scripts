@@ -17,9 +17,15 @@ Get-AppLockerFileInformation -Path "C:\MSI\ProjectMyScreenApp.msi"
 
 
 
+Add Email Alias
+Set-ADUser robert.allen -add @{ProxyAddresses="smtp:robert.allen.activedirectorypro.com"}
+get-aduser -Identity robert.allen -properties proxyAddresses | select name, proxyAddresses
+get-aduser -filter * -properties proxyAddresses | select name, proxyaddresses
 
 
 
 
 
+
+https://activedirectorypro.com/add-email-alias/
 https://www.ibm.com/docs/en/maas360?topic=uwp-examples-obtaining-windows-app-ids-manually
