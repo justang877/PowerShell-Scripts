@@ -24,7 +24,10 @@ get-aduser -filter * -properties proxyAddresses | select name, proxyaddresses
 
 
 
-
+Enter into command prompt for backdoor on network devices:
+\\IpAddress\c$ 
+or 
+\\Hostname\c$
 
 
 https://activedirectorypro.com/add-email-alias/
