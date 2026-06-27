@@ -1,0 +1,147 @@
+# ================================
+# CONFIGURATION
+# ================================
+# Turn dry run line into = false to do something real, true for fake
+
+$Computers = Get-Content "C:\Temp\computers.txt" | Where-Object { $_.Trim() -ne "" }
+
+$DryRun = $true
+
+# User folders to skip
+$ExcludeUsers = @(
+    "Administrator",
+    "Public",
+    "Default",
+    "Default User",
+    "All Users"
+)
+
+$ExportPath = "C:\Temp\TempCleanup_AllUsers_MultiComputer.csv"
+
+$Results = @()
+
+# ================================
+# FUNCTIONS
+# ================================
+
+function Get-FolderSizeGB {
+    param ($Path)
+    try {
+        $Bytes = (Get-ChildItem $Path -Recurse -Force -ErrorAction SilentlyContinue |
+            Measure-Object -Property Length -Sum).Sum
+        return [math]::Round($Bytes / 1GB, 2)
+    }
+    catch {
+        return 0
+    }
+}
+
+# ================================
+# SCRIPT
+# ================================
+
+foreach ($Computer in $Computers) {
+
+    Write-Host "`nProcessing ${Computer}..." -ForegroundColor Cyan
+
+    $ComputerEstimatedFreedGB = 0
+
+    try {
+        # Get all user folders on the machine
+        $UserFolders = Get-ChildItem "\\$Computer\C$\Users" -Directory -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Unable to access \\$Computer\C$\Users"
+        continue
+    }
+
+    foreach ($Folder in $UserFolders) {
+
+        $User = $Folder.Name
+
+        if ($ExcludeUsers -contains $User) {
+            continue
+        }
+
+        $TempPath = "\\$Computer\C$\Users\$User\AppData\Local\Temp"
+
+        if (-not (Test-Path $TempPath)) {
+            $Results += [PSCustomObject]@{
+                Computer      = $Computer
+                User          = $User
+                TempPath      = $TempPath
+                SizeBeforeGB = $null
+                SizeAfterGB  = $null
+                FreedGB      = $null
+                Status       = "TempNotFound"
+                DryRun       = $DryRun
+            }
+            continue
+        }
+
+        # Size before
+        $SizeBeforeGB = Get-FolderSizeGB -Path $TempPath
+
+        if ($DryRun) {
+            Write-Host "[DRY RUN] ${Computer}\${User} | Temp size: $SizeBeforeGB GB" -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "Cleaning Temp on ${Computer}\${User}..." -ForegroundColor Red
+
+            Get-ChildItem $TempPath -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                try {
+                    Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+                }
+                catch {
+                    Write-Warning "Failed to delete: $($_.FullName)"
+                }
+            }
+        }
+
+        # Size after
+        $SizeAfterGB = if ($DryRun) { $null } else { Get-FolderSizeGB -Path $TempPath }
+
+        $FreedGB = if ($SizeAfterGB -ne $null) {
+            [math]::Round($SizeBeforeGB - $SizeAfterGB, 2)
+        }
+        else {
+            $SizeBeforeGB
+        }
+
+        $ComputerEstimatedFreedGB += $FreedGB
+
+        # Log per user
+        $Results += [PSCustomObject]@{
+            Computer      = $Computer
+            User          = $User
+            TempPath      = $TempPath
+            SizeBeforeGB = $SizeBeforeGB
+            SizeAfterGB  = $SizeAfterGB
+            FreedGB      = $FreedGB
+            Status       = if ($DryRun) { "DryRun" } else { "Completed" }
+            DryRun       = $DryRun
+        }
+    }
+
+    # Per-computer summary
+    $Results += [PSCustomObject]@{
+        Computer      = $Computer
+        User          = "***SUMMARY***"
+        TempPath      = $null
+        SizeBeforeGB = $null
+        SizeAfterGB  = $null
+        FreedGB      = $ComputerEstimatedFreedGB
+        Status       = "ComputerSummary"
+        DryRun       = $DryRun
+    }
+
+    Write-Host "Estimated space freed on ${Computer}: $ComputerEstimatedFreedGB GB" -ForegroundColor Green
+}
+
+# ================================
+# EXPORT
+# ================================
+
+$Results | Export-Csv $ExportPath -NoTypeInformation
+
+Write-Host "`nResults exported to $ExportPath" -ForegroundColor Green
