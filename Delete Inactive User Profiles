@@ -1,0 +1,34 @@
+#Delete User profiles not modified in over 365 days, excluding public and sccadmin
+
+ 
+
+$UsersPath = 'C:\Users\'
+
+$UserProfules = Get-ChildItem -Path $UsersPath | Where-Object {
+
+                $_.Name - notlike "*sccmadmin*" -and
+
+                $_.Name - notlike "*Public*" -and
+
+                $_.LastWriteTime -le (Get-Date).AddDays(-365)
+
+} | Select-Object -ExpandProperty Name
+
+ 
+
+foreach ($UserProfile in $UserProfiles) {
+
+                $UserWMI = Get-WmiObject -Class Win32_UserProfile | Where-Object {
+
+                                $_.LocalPath -eq (Join-Path -Path $UsersPath -ChildPath $USerProfile)
+
+                }
+
+                if ($UserWMI) {
+
+                                $UsersWMI.Delete()
+
+                }
+
+}
+
